@@ -1,0 +1,38 @@
+---
+title: "raw_to_clean"
+output: html_document
+date: "2025-04-23"
+---
+
+# Control under pressure — the influence of aversive motivation on adaptive control
+
+## Raw 2 clean
+
+### Installing packages
+
+```{r}
+if(!require("tidyverse")) install.packages("tidyverse")
+library(tidyverse)
+```
+
+#### Loading raw data
+
+```{r}
+raw_data <- read.csv("pilotresults.csv")
+```
+
+### Filtering out the data
+
+```{r}
+raw_data_filtered = raw_data %>% 
+  select(-trial_type,
+         -trial_index,
+         -plugin_version,
+         -success,
+         -question_order,
+         -slider_start
+         )
+
+raw_data_filtered = raw_data_filtered %>% 
+  filter(response == "n" | response == "j" | response == "f" | response == "g" | response == "null")
+```
