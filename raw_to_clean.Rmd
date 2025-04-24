@@ -27,10 +27,9 @@ raw_data <- read.csv("pilotresults.csv")
 
 ```{r}
 
-
 #Filtering columns
 raw_data_filtered = raw_data %>% 
-  select(-trial_type,
+  select(
          -trial_index,
          -plugin_version,
          -success,
@@ -40,13 +39,18 @@ raw_data_filtered = raw_data %>%
          -time_elapsed)
 
 raw_data_filtered = raw_data_filtered %>% 
-   filter(response == "n" | response == "j" | response == "f" | response == "g" | task == "probe")
-
+   filter(response == "n" | response == "j" | response == "f" | response == "g" | response == "null")
 
 #Filtering stimuli
+
+
+#True/false values to 1/0
 raw_data_filtered = raw_data_filtered %>%
   mutate(
     correct = factor(recode(correct,
                              "true" = "1",
                              "false" = "0")))
+
+likert_data = raw_data %>% 
+  filter( trial_type == "survey-likert")
 ```
