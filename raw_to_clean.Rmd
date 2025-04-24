@@ -26,10 +26,9 @@ raw_data <- read.csv("pilotresults.csv")
 ## Cleaning/filtering data
 
 ```{r}
-
 #Filtering columns
 raw_data_filtered = raw_data %>% 
-  select(
+  select(-trial_type,
          -trial_index,
          -plugin_version,
          -success,
@@ -38,14 +37,39 @@ raw_data_filtered = raw_data %>%
          -stimulus,
          -time_elapsed)
 
+raw_data_filtered <- raw_data_filtered %>%
+  filter(
+    feedback_type %in% c(
+      "random_punishment_random",
+      "no_punishment_incongruent",
+      "no_punishment_congruent",
+      "punishment_incongruent",
+      "punishment_congruent"
+    ) |
+    response %in% c("n", "j", "f", "g"))
+
 raw_data_filtered = raw_data_filtered %>% 
-   filter(response == "n" | response == "j" | response == "f" | response == "g" | response == "null")
+  filter(name != "practice")
+
+raw_data_labeled <- raw_data_filtered %>%
+  mutate(feedback_from_next = lead(feedback_type))
+
+task_trials <- raw_data_labeled %>%
+  filter(response %in% c("n", "j", "f", "g")) %>%
+  select(-feedback_type) %>%
+  rename(feedback_type = feedback_from_next) 
+
+    
+```
+
+
+```{r}
 
 #Filtering stimuli
 
 
 #True/false values to 1/0
-raw_data_filtered = raw_data_filtered %>%
+raw_data_labeled = raw_data_labeled %>%
   mutate(
     correct = factor(recode(correct,
                              "true" = "1",
