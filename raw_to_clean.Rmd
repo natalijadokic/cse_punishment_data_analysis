@@ -26,9 +26,19 @@ raw_data <- read.csv("pilotresults.csv")
 ## Cleaning/filtering data
 
 ```{r}
+#Filtering columns
+raw_data_filtered = raw_data %>% 
+  select(-trial_type,
+         -trial_index,
+         -plugin_version,
+         -success,
+         -question_order,
+         -slider_start,
+         -stimulus,
+         -time_elapsed
+         )
 
 #Filtering practice blocks
-
 practice_value <- "practice"
 
 if (!"name" %in% colnames(raw_data_filtered)) {
@@ -47,22 +57,9 @@ if (length(practice_rows) == 0) {
   raw_data_filtered <- raw_data_filtered[-rows_to_remove, ]
 }
 
-#Filtering columns
-raw_data_filtered = raw_data %>% 
-  select(-trial_type,
-         -trial_index,
-         -plugin_version,
-         -success,
-         -question_order,
-         -slider_start,
-         -stimulus,
-         -time_elapsed
-         )
 
 
-
-
-#Filtering stimuli
+#True/false values to 1/0
 raw_data_filtered = raw_data_filtered %>%
   mutate(
     correct = factor(recode(correct,
