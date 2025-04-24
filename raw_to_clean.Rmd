@@ -4,26 +4,27 @@ output: html_document
 date: "2025-04-23"
 ---
 
-# Control under pressure — the influence of aversive motivation on adaptive control
+## Control under pressure — the influence of aversive motivation on adaptive control
 
-## Raw 2 clean
+## Raw to clean
 
-### Installing packages
+## Loading packages
 
 ```{r}
 if(!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
 ```
 
-#### Loading raw data
+## Loading raw data
 
 ```{r}
 raw_data <- read.csv("pilotresults.csv")
 ```
 
-### Filtering out the data
+## Cleaning/filtering data
 
 ```{r}
+#Filtering columns
 raw_data_filtered = raw_data %>% 
   select(-trial_type,
          -trial_index,
@@ -32,6 +33,31 @@ raw_data_filtered = raw_data %>%
          -question_order,
          -slider_start
          )
+
+
+#Filtering practice blocks
+library(dplyr)
+library(stringr)
+
+practice_value <- "practice"
+
+if (!"name" %in% colnames(raw_data_filtered)) {
+  stop("Column 'name' not found in the dataframe.")
+}
+
+practice_rows <- which(str_detect(raw_data_filtered$name, practice_value))
+
+if (length(practice_rows) == 0) {
+  warning("No rows found containing the string 'practice'.")
+} else {
+  rows_to_remove <- unique(unlist(lapply(practice_rows, function(i) (i-3):(i+1))))
+  
+  rows_to_remove <- rows_to_remove[rows_to_remove > 0 & rows_to_remove <= nrow(raw_data_filtered)]
+  
+  raw_data_filtered <- raw_data_filtered[-rows_to_remove, ]
+}
+
+#Filtering stimuli
 
 raw_data_filtered = raw_data_filtered %>% 
   filter(response == "n" | response == "j" | response == "f" | response == "g" | response == "null")
@@ -67,4 +93,8 @@ raw_data_filtered$stimulus <- gsub("<div style='font-size: 35px; color: black;'>
 raw_data_filtered$stimulus <- gsub('<div style="font-size: 35px; color: black;">✘</div>', '✘', raw_data_filtered$stimulus, fixed = TRUE
 )
 
+#NEUTRAL FEEDBACK
+raw_data_filtered$stimulus <- gsub("<div style='font-size: 35px; color: black; font-weight: bold;'>&#11036</div>", '&#11036', raw_data_filtered$stimulus, fixed = TRUE)
 ```
+
+
