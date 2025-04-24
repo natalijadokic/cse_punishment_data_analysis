@@ -27,25 +27,6 @@ raw_data <- read.csv("pilotresults.csv")
 
 ```{r}
 
-#Filtering practice blocks
-
-practice_value <- "practice"
-
-if (!"name" %in% colnames(raw_data_filtered)) {
-  stop("Column 'name' not found in the dataframe.")
-}
-
-practice_rows <- which(str_detect(raw_data_filtered$name, practice_value))
-
-if (length(practice_rows) == 0) {
-  warning("No rows found containing the string 'practice'.")
-} else {
-  rows_to_remove <- unique(unlist(lapply(practice_rows, function(i) (i-3):(i+1))))
-  
-  rows_to_remove <- rows_to_remove[rows_to_remove > 0 & rows_to_remove <= nrow(raw_data_filtered)]
-  
-  raw_data_filtered <- raw_data_filtered[-rows_to_remove, ]
-}
 
 #Filtering columns
 raw_data_filtered = raw_data %>% 
@@ -56,10 +37,10 @@ raw_data_filtered = raw_data %>%
          -question_order,
          -slider_start,
          -stimulus,
-         -time_elapsed
-         )
+         -time_elapsed)
 
-
+raw_data_filtered = raw_data_filtered %>% 
+   filter(response == "n" | response == "j" | response == "f" | response == "g" | task == "probe")
 
 
 #Filtering stimuli
@@ -69,5 +50,3 @@ raw_data_filtered = raw_data_filtered %>%
                              "true" = "1",
                              "false" = "0")))
 ```
-
-
