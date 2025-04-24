@@ -13,6 +13,8 @@ date: "2025-04-23"
 ```{r}
 if(!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
+library(dplyr)
+library(stringr)
 ```
 
 ## Loading raw data
@@ -36,8 +38,6 @@ raw_data_filtered = raw_data %>%
 
 
 #Filtering practice blocks
-library(dplyr)
-library(stringr)
 
 practice_value <- "practice"
 
