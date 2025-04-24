@@ -26,16 +26,6 @@ raw_data <- read.csv("pilotresults.csv")
 ## Cleaning/filtering data
 
 ```{r}
-#Filtering columns
-raw_data_filtered = raw_data %>% 
-  select(-trial_type,
-         -trial_index,
-         -plugin_version,
-         -success,
-         -question_order,
-         -slider_start
-         )
-
 
 #Filtering practice blocks
 
@@ -57,44 +47,27 @@ if (length(practice_rows) == 0) {
   raw_data_filtered <- raw_data_filtered[-rows_to_remove, ]
 }
 
+#Filtering columns
+raw_data_filtered = raw_data %>% 
+  select(-trial_type,
+         -trial_index,
+         -plugin_version,
+         -success,
+         -question_order,
+         -slider_start,
+         -stimulus,
+         -time_elapsed
+         )
+
+
+
+
 #Filtering stimuli
-
-raw_data_filtered = raw_data_filtered %>% 
-  filter(response == "n" | response == "j" | response == "f" | response == "g" | response == "null")
-#KERESZT
-raw_data_filtered$stimulus <- gsub('<div style="font-size:60px;">+</div>', '+', raw_data_filtered$stimulus, fixed = TRUE)
-
-#LE
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>le<br>le<br>le</span>", 'le le le', raw_data_filtered$stimulus, fixed = TRUE)
-
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>le</span>", 'le', raw_data_filtered$stimulus, fixed = TRUE)
-
-#FEL
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>fel<br>fel<br>fel</span>", 'fel fel fel', raw_data_filtered$stimulus, fixed = TRUE) 
-
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>fel</span>", 'fel', raw_data_filtered$stimulus, fixed = TRUE)
-
-#JOBB
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>jobb<br>jobb<br>jobb</span>", 'jobb jobb jobb', raw_data_filtered$stimulus, fixed = TRUE)
-
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>jobb</span>", 'jobb', raw_data_filtered$stimulus, fixed = TRUE)
-
-#BAL
-
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>bal<br>bal<br>bal</span>", 'bal bal bal', raw_data_filtered$stimulus, fixed = TRUE)
-
-
-raw_data_filtered$stimulus <- gsub("<span style='font-size: 35px;'>bal</span>", 'bal', raw_data_filtered$stimulus, fixed = TRUE)
-
-#CHECKMARK
-	
-raw_data_filtered$stimulus <- gsub("<div style='font-size: 35px; color: black;'>✔</div>", '✔', raw_data_filtered$stimulus, fixed = TRUE)
-
-raw_data_filtered$stimulus <- gsub('<div style="font-size: 35px; color: black;">✘</div>', '✘', raw_data_filtered$stimulus, fixed = TRUE
-)
-
-#NEUTRAL FEEDBACK
-raw_data_filtered$stimulus <- gsub("<div style='font-size: 35px; color: black; font-weight: bold;'>&#11036</div>", '&#11036', raw_data_filtered$stimulus, fixed = TRUE)
+raw_data_filtered = raw_data_filtered %>%
+  mutate(
+    correct = factor(recode(correct,
+                             "true" = "1",
+                             "false" = "0")))
 ```
 
 
