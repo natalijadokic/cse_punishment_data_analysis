@@ -75,6 +75,36 @@ raw_data_labeled = raw_data_labeled %>%
                              "true" = "1",
                              "false" = "0")))
 
-likert_data = raw_data %>% 
-  filter( trial_type == "survey-likert")
 ```
+
+```{r}
+
+#PANAS data
+panas_data = raw_data %>% 
+  filter( trial_type == "survey-likert")
+
+panas_data = panas_data %>%
+  select(-rt,
+         -stimulus,
+         -trial_index,
+         -plugin_version,
+         -time_elapsed,
+         -success,
+         -question_order,
+         -task,
+         -correct_response,
+         -congruency,
+         -name,
+         -correct,
+         -slider_start,
+         -feedback_type,
+         -trial_type)
+
+panas_data <- panas_data %>%
+  mutate(
+    item = str_extract(response, '"(.*?)"') %>% str_remove_all('"'),
+    value = str_extract(response, ':\\d+') %>% str_remove(':') %>% as.numeric()
+  ) %>%
+  select(item, value, subj_code)
+```
+
