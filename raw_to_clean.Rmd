@@ -72,6 +72,48 @@ raw_data_labeled = raw_data_labeled %>%
 ```
 
 ```{r}
+#Demography data
+
+demography_data <- raw_data %>%
+  filter(
+    trial_type %in% c(
+      "survey-text",
+      "survey-multi-choice"))
+    
+demography_data <- demography_data %>%
+  select(
+    response,
+    subj_code
+  )
+
+demography_data <- demography_data %>%
+  mutate(
+    age = str_extract(response, '"age":"\\d+"') %>%
+      str_extract("\\d+") %>%
+      as.numeric(),
+    
+    education = str_extract(response, '"education":"[^"]+"') %>%
+      str_remove_all('"education":"') %>%
+      str_remove('"'),
+    
+    gender = str_extract(response, '"gender":"[^"]+"') %>%
+      str_remove_all('"gender":"') %>%
+      str_remove('"')
+  )
+
+demography_data <- demography_data %>%
+  select(-response)
+
+demography_data <- demography_data %>%
+  group_by(subj_code) %>%
+  summarize(
+    age = coalesce(age[1], age[2]),
+    education = coalesce(education[1], education[2]),
+    gender = coalesce(gender[1], gender[2])
+  )
+```
+
+```{r}
 #Flagging and removing first trials
 
 ```
