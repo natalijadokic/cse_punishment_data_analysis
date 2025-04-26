@@ -57,29 +57,30 @@ raw_data_labeled <- raw_data_filtered %>%
 task_trials <- raw_data_labeled %>%
   filter(response %in% c("n", "j", "f", "g")) %>%
   select(-feedback_type) %>%
-  rename(feedback_type = feedback_from_next) 
-
-    
+  rename(feedback_type = feedback_from_next)
 ```
 
 
 ```{r}
-
-#Filtering stimuli
-
-
 #True/false values to 1/0
+
 raw_data_labeled = raw_data_labeled %>%
   mutate(
     correct = factor(recode(correct,
                              "true" = "1",
                              "false" = "0")))
+```
+
+```{r}
+#Flagging and removing first trials
 
 ```
 
 ```{r}
+#Survey data
 
 #PANAS data
+
 panas_data = raw_data %>% 
   filter( trial_type == "survey-likert")
 
@@ -106,5 +107,50 @@ panas_data <- panas_data %>%
     value = str_extract(response, ':\\d+') %>% str_remove(':') %>% as.numeric()
   ) %>%
   select(item, value, subj_code)
-```
 
+#VAS dislike data
+
+dislike_data = raw_data %>% 
+  filter( trial_type == "html-slider-response",
+          stimulus != "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>")
+
+dislike_data = dislike_data %>%
+  select(-rt,
+         -stimulus,
+         -trial_index,
+         -plugin_version,
+         -time_elapsed,
+         -success,
+         -question_order,
+         -task,
+         -correct_response,
+         -congruency,
+         -name,
+         -correct,
+         slider_start,
+         -feedback_type,
+         -trial_type)
+
+#VAS manipulation data
+
+manipulation_data = raw_data %>% 
+  filter( trial_type == "html-slider-response",
+          stimulus == "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>")
+
+manipulation_data = manipulation_data %>%
+  select(-rt,
+         -stimulus,
+         -trial_index,
+         -plugin_version,
+         -time_elapsed,
+         -success,
+         -question_order,
+         -task,
+         -correct_response,
+         -congruency,
+         -name,
+         -correct,
+         slider_start,
+         -feedback_type,
+         -trial_type)
+```
