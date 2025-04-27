@@ -23,11 +23,30 @@ library(stringr)
 raw_data <- read.csv("pilotresults.csv")
 ```
 
+## flagging previous events in probe stimuli before filtering
+```{r}
+raw_data = raw_data %>% 
+  mutate(feedback = case_when(grepl(">✘</div>",stimulus) ~ "visual_punishment", # flagging different feedback events in new variable
+                                grepl("&#11036", stimulus) ~ "neutral",
+                                grepl(">✘<br>5 garast veszítettél</div>",stimulus) ~ "monetary_loss",
+                                grepl("✔",stimulus) ~ "tickmark"
+                                ),
+         prev_feedback = ifelse(task=="probe", lag(feedback,n=4),""), ## Flagging previous feedback in probe trial
+         prev_loss = ifelse(prev_feedback == "monetary_loss", 1,0), ## Flagging if monetary loss happened before this probe 
+         prev_correct = lag(correct,n=5), ## flagging previous correct
+         prev_congruency = lag(congruency, n=5), ## creating previous congruency variable
+         block_feedback_type = lead(feedback_type)) ## moving feedback type data to probe variable
+
+
+
+```
+
+
 ## Cleaning/filtering data
 
 ```{r}
 #Filtering columns
-raw_data_filtered = raw_data %>% 
+processed_data = raw_data %>% 
   select(-trial_type,
          -trial_index,
          -plugin_version,
@@ -37,37 +56,68 @@ raw_data_filtered = raw_data %>%
          -stimulus,
          -time_elapsed)
 
-raw_data_filtered <- raw_data_filtered %>%
-  filter(
-    feedback_type %in% c(
-      "random_punishment_random",
-      "no_punishment_incongruent",
-      "no_punishment_congruent",
-      "punishment_incongruent",
-      "punishment_congruent"
-    ) |
-    response %in% c("n", "j", "f", "g"))
+#raw_data_filtered <- raw_data_filtered %>%
+ # filter(
+  #  feedback_type %in% c(
+   #   "random_punishment_random",
+    #  "no_punishment_incongruent",
+     # "no_punishment_congruent",
+      #"punishment_incongruent",
+    #  "punishment_congruent"
+    #) |
+    #response %in% c("n", "j", "f", "g"))
+processed_data = raw_data %>% # Keeping only probe rows
+  filter(task=="probe")
 
-raw_data_filtered = raw_data_filtered %>% 
+processed_data = processed_data %>% 
   filter(name != "practice")
 
-raw_data_labeled <- raw_data_filtered %>%
-  mutate(feedback_from_next = lead(feedback_type))
+processed_data =processed_data %>% ## filtering out first trials here 
+  filter(!is.na(prev_feedback))
 
+processed_rt_data = processed_data %>% ## keeping only correct responses for rt analysis
+  filter(correct == "true",
+         prev_correct == "true")
 
 #True/false values to 1/0
 
-raw_data_labeled = raw_data_labeled %>%
-  mutate(
-    correct = factor(recode(correct,
-                             "true" = "1",
-                             "false" = "0")))
+#raw_data_labeled = raw_data_labeled %>%
+ # mutate(
+ #   correct = factor(recode(correct,
+ #                            "true" = "1",
+  #                           "false" = "0")))
 
-task_trials <- raw_data_labeled %>%
-  filter(response %in% c("n", "j", "f", "g")) %>%
-  select(-feedback_type) %>%
-  rename(feedback_type = feedback_from_next)
+#task_trials <- raw_data_labeled %>%
+ # filter(response %in% c("n", "j", "f", "g")) %>%
+  #select(-feedback_type) %>%
+  #rename(feedback_type = feedback_from_next)
 ```
+
+## example plot for cse
+```{r}
+cse_summary_table = processed_rt_data %>% 
+  group_by(prev_congruency, congruency) %>% 
+  summarize(N = n(),
+            mean_rt = mean(as.numeric(rt), na.rm = T),
+            sd_rt = sd(rt, na.rm = T),
+            se_rt = sd_rt/sqrt(N))
+
+```
+```{r}
+cseplot = cse_summary_table %>% 
+  ggplot()+
+  aes(x=prev_congruency, y=mean_rt, color=congruency, group=congruency)+
+  geom_point(size=1)+
+  geom_path(size=1)+
+  geom_errorbar(aes(ymin=mean_rt-se_rt, ymax=mean_rt+se_rt), width=.2, size=1)+
+  scale_color_brewer(palette = "Pastel2")+
+  papaja::theme_apa()
+
+cseplot
+```
+
+
+
 
 ## Demography data
 
@@ -111,10 +161,7 @@ demography_data <- demography_data %>%
   )
 ```
 
-```{r}
-#Flagging and removing first trials
 
-```
 
 ## Survey data
 
