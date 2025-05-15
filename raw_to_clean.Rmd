@@ -9,9 +9,13 @@ date: "2025-04-23"
 ## Raw to clean
 
 ## Loading packages
+```{r}
+"tidyverse" %in% rownames(installed.packages())
+install.packages("tidyverse")
+```
+
 
 ```{r}
-if(!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
 library(dplyr)
 library(stringr)
@@ -37,10 +41,11 @@ raw_data = raw_data %>%
          prev_congruency = lag(congruency, n=5), ## creating previous congruency variable
          block_feedback_type = lead(feedback_type)) ## moving feedback type data to probe variable
 
-
-
+raw_data = raw_data %>% 
+  mutate(correct = if_else(correct == "true", 1, 0))
+raw_data = raw_data %>% 
+  mutate(prev_correct = if_else(prev_correct == "true", 1, 0))
 ```
-
 
 ## Cleaning/filtering data
 
@@ -56,16 +61,6 @@ processed_data = raw_data %>%
          -stimulus,
          -time_elapsed)
 
-#raw_data_filtered <- raw_data_filtered %>%
- # filter(
-  #  feedback_type %in% c(
-   #   "random_punishment_random",
-    #  "no_punishment_incongruent",
-     # "no_punishment_congruent",
-      #"punishment_incongruent",
-    #  "punishment_congruent"
-    #) |
-    #response %in% c("n", "j", "f", "g"))
 processed_data = raw_data %>% # Keeping only probe rows
   filter(task=="probe")
 
@@ -74,23 +69,68 @@ processed_data = processed_data %>%
 
 processed_data =processed_data %>% ## filtering out first trials here 
   filter(!is.na(prev_feedback))
+```
 
-processed_rt_data = processed_data %>% ## keeping only correct responses for rt analysis
-  filter(correct == "true",
-         prev_correct == "true")
+##Accuracy cut off and exclusion
+```{r}
+accuracy_df = processed_data %>% 
+  group_by(subj_code) %>% 
+  summarise(all_accuracy = mean(correct))
 
-#True/false values to 1/0
+processed_data = processed_data %>% 
+  left_join(accuracy_df, by = "subj_code") %>%
+  filter(all_accuracy> 0.60)
+```
 
-#raw_data_labeled = raw_data_labeled %>%
- # mutate(
- #   correct = factor(recode(correct,
- #                            "true" = "1",
-  #                           "false" = "0")))
+##Time cut off
+```{r}
+time_df = processed_data %>% 
+  group_by(subj_code) %>% 
+  summarise(full_time = max(as.numeric(time_elapsed))) %>% 
+  mutate(duration_min = full_time / 1000 / 60)
 
-#task_trials <- raw_data_labeled %>%
- # filter(response %in% c("n", "j", "f", "g")) %>%
-  #select(-feedback_type) %>%
-  #rename(feedback_type = feedback_from_next)
+processed_data = processed_data %>% 
+  left_join(time_df, by = "subj_code") %>% 
+  filter(duration_min < 120)
+```
+
+##Demography data
+```{r}
+demography_data = raw_data %>%
+  filter(trial_type %in% c("survey-text", "survey-multi-choice"))
+    
+demography_data = demography_data %>%
+  select(response, subj_code)
+
+demography_data = demography_data %>%
+  mutate(age = str_extract(response, '"age":"\\d+"') %>%
+      str_extract("\\d+") %>%
+      as.numeric(),
+    
+    education = str_extract(response, '"education":"[^"]+"') %>%
+      str_remove_all('"education":"') %>%
+      str_remove('"'),
+    
+    gender = str_extract(response, '"gender":"[^"]+"') %>%
+      str_remove_all('"gender":"') %>%
+      str_remove('"'))
+
+demography_data = demography_data %>%
+  select(-response)
+
+demography_data = demography_data %>%
+  group_by(subj_code) %>%
+  summarize(
+    age = coalesce(age[1], age[2]),
+    education = coalesce(education[1], education[2]),
+    gender = coalesce(gender[1], gender[2]))
+```
+
+## keeping only correct responses for rt analysis
+```{r}
+processed_rt_data = processed_data %>% 
+  filter(correct == "1",
+         prev_correct == "1")
 ```
 
 ## example plot for cse
@@ -116,130 +156,53 @@ cseplot = cse_summary_table %>%
 cseplot
 ```
 
-
-
-
-## Demography data
-
+##Flagging the condition of PANAS
 ```{r}
-demography_data <- raw_data %>%
-  filter(
-    trial_type %in% c(
-      "survey-text",
-      "survey-multi-choice"))
-    
-demography_data <- demography_data %>%
-  select(
-    response,
-    subj_code
-  )
+raw_data = raw_data %>% 
+  mutate(panas_condition = ifelse(trial_type == "survey-likert",case_when(
+    lag(name, 4) == "practice" ~ "first_panas",
+    lag(feedback_type, 4)!="NA" & lag(trial_type)!="survey-likert" ~ paste0("panas_",lag(feedback_type,4))
+  ), ""))
+start_rows = which(raw_data$panas_condition != "") #Ez végigfut a kódon és flagel minden egyes olyan helyet, ahol a panas_condition nem üres. Ezek lesznek a start row-ok, amiknek van egy értéke -> c(292, 1534, 2776 stb.).
+for (start_row in start_rows) { #ez elindít egy loopot, ami minden start rows értéket megtalál
+  end_row = min(start_row + 19) #Ez meghatározza az utolsó kitöltendő sort. A start row érték után a 19. ig töltsed ki értékkel. gy h
+  value_to_fill = raw_data$panas_condition[start_row] #itt létrehozok egy változót (value_to fill) a panas_condition variable azon értékét, amin a start_rows van.
+  raw_data$panas_condition [start_row:end_row] = value_to_fill #ez pedig fogja és a megadott tartományt kitölti a value_to fill változómban lévő értékkel. 
+}
 
-demography_data <- demography_data %>%
-  mutate(
-    age = str_extract(response, '"age":"\\d+"') %>%
-      str_extract("\\d+") %>%
-      as.numeric(),
-    
-    education = str_extract(response, '"education":"[^"]+"') %>%
-      str_remove_all('"education":"') %>%
-      str_remove('"'),
-    
-    gender = str_extract(response, '"gender":"[^"]+"') %>%
-      str_remove_all('"gender":"') %>%
-      str_remove('"')
-  )
 
-demography_data <- demography_data %>%
-  select(-response)
-
-demography_data <- demography_data %>%
-  group_by(subj_code) %>%
-  summarize(
-    age = coalesce(age[1], age[2]),
-    education = coalesce(education[1], education[2]),
-    gender = coalesce(gender[1], gender[2])
-  )
+```
+##Flagging the condition of VAS dislike
+```{r}
+raw_data = raw_data %>% 
+  mutate(vas_condition = case_when(trial_type == "html-slider-response" &
+    !is.na(lag(panas_condition, 1)) & lag(trial_type)!="html-slider-response" ~ paste0("vas_",lag(panas_condition,1)))) %>%
+  mutate(vas_condition = str_remove(vas_condition, "_panas"))
 ```
 
 
-
 ## Survey data
-
 ```{r}
-#Survey data
-
 #PANAS data
 
 panas_data = raw_data %>% 
-  filter( trial_type == "survey-likert")
-
-panas_data = panas_data %>%
-  select(-rt,
-         -stimulus,
-         -trial_index,
-         -plugin_version,
-         -time_elapsed,
-         -success,
-         -question_order,
-         -task,
-         -correct_response,
-         -congruency,
-         -name,
-         -correct,
-         -slider_start,
-         -feedback_type,
-         -trial_type)
-
-panas_data <- panas_data %>%
-  mutate(
-    item = str_extract(response, '"(.*?)"') %>% str_remove_all('"'),
-    value = str_extract(response, ':\\d+') %>% str_remove(':') %>% as.numeric()
-  ) %>%
-  select(item, value, subj_code)
+  filter(trial_type == "survey-likert") %>%
+  mutate(item = str_extract(response, '"(.*?)"') %>% str_remove_all('"'),
+         value = str_extract(response, ':\\d+') %>% str_remove(':') %>% as.numeric()) %>%
+  select(item, value, subj_code, panas_condition)
 
 #VAS dislike data
 
 dislike_data = raw_data %>% 
   filter( trial_type == "html-slider-response",
-          stimulus != "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>")
+          stimulus != "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>") %>%
+  select(response,subj_code,slider_start, vas_condition)
 
-dislike_data = dislike_data %>%
-  select(-rt,
-         -stimulus,
-         -trial_index,
-         -plugin_version,
-         -time_elapsed,
-         -success,
-         -question_order,
-         -task,
-         -correct_response,
-         -congruency,
-         -name,
-         -correct,
-         slider_start,
-         -feedback_type,
-         -trial_type)
-
-#VAS manipulation data
+##VAS manipulation data
+#manipulation is always at the end of the experiment, hence not needing a condition
 
 manipulation_data = raw_data %>% 
   filter( trial_type == "html-slider-response",
-          stimulus == "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>")
-
-manipulation_data = manipulation_data %>%
-  select(-rt,
-         -stimulus,
-         -trial_index,
-         -plugin_version,
-         -time_elapsed,
-         -success,
-         -question_order,
-         -task,
-         -correct_response,
-         -congruency,
-         -name,
-         -correct,
-         slider_start,
-         -feedback_type,
-         -trial_type)
+          stimulus == "<p>Kérlek, jelöld be 0 (egyáltalán nem) és 100 (teljes mértékben) között, hogy milyen mértékben vettél észre szabályosságot a visszajelzések bemutatásában!</p>") %>%
+  select(response, slider_start,subj_code)
 ```
